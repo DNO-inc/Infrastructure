@@ -1,0 +1,23 @@
+#cloud-config
+
+package_update: false
+
+groups:
+  - admingroup: [root,sys]
+  - cloud-users
+
+users:
+  - default
+  - name: admin
+    groups:
+      - sudo
+      - cloud-users
+    sudo:
+      - ALL=(ALL:ALL) NOPASSWD:ALL
+    lock_passwd: true
+    ssh_authorized_keys:
+      - ${admin_user_public_key}
+
+ssh_deletekeys: false
+
+final_message: "The system is finally up, after $UPTIME seconds"

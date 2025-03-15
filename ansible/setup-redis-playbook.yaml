@@ -1,0 +1,7 @@
+- name: Configure redis
+  hosts: dbs
+  remote_user: admin
+  become: true
+
+  roles:
+    - redis

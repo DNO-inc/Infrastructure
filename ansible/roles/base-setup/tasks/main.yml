@@ -1,0 +1,20 @@
+---
+
+- name: Update all packages
+  ansible.builtin.dnf:
+    update_cache: true
+    name: "*"
+    state: latest
+
+- name: Remove unnecessary packages
+  ansible.builtin.dnf:
+    autoremove: true
+
+- name: Install common tools
+  ansible.builtin.dnf:
+    name: "{{ item }}"
+    state: installed
+  with_items:
+    - python3.10
+    - python3-pip
+    - git

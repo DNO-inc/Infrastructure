@@ -1,0 +1,54 @@
+---
+
+- name: Install required dependencies
+  ansible.builtin.dnf:
+    name: "{{ item }}"
+    state: installed
+  with_items:
+    - nodejs
+    - nginx
+
+- name: Checkout {{ tres_git_repo }} to {{ tres_target_path }}
+  ansible.builtin.git:
+    repo: "{{ tres_git_repo }}"
+    dest: "{{ tres_target_path }}"
+    single_branch: true
+    version: main
+
+- name: Install project dependencies
+  ansible.builtin.shell: |
+    cd {{ tres_target_path }}
+    npm install
+
+- name: Copy file with environment variables
+  ansible.builtin.copy:
+    src: "{{ tres_envfile_src }}"
+    dest: "{{ tres_target_path }}/.env"
+    mode: "0640"
+
+- name: Build tres
+  ansible.builtin.shell: |
+    cd {{ tres_target_path }}
+    npm run build
+
+- name: Clear {{ tres_artifact_path }} folder
+  ansible.builtin.shell: rm -rf {{ tres_artifact_path }}
+
+- name: Copy tres artifacts to {{ tres_artifact_path }}
+  ansible.builtin.copy:
+    remote_src: true
+    src: "{{ tres_target_path }}/dist/"
+    dest: "{{ tres_artifact_path }}"
+    mode: "0755"
+    owner: root
+    group: nginx
+
+- name: Fix file context
+  ansible.builtin.shell:
+    restorecon -Rv {{ tres_artifact_path }}
+
+- name: Ensure nginx is running
+  ansible.builtin.service:
+    name: nginx
+    state: started
+    enabled: true

@@ -1,0 +1,10 @@
+
+.terraform/
+*.tfstate*
+.terraform.lock.hcl
+
+certs/*
+
+.venv
+.env
+.vscode

@@ -1,0 +1,11 @@
+[Unit]
+Description=Burrito API
+After=network.target
+
+[Service]
+WorkingDirectory={{ burrito_target_path }}
+EnvironmentFile={{ burrito_envfile_dest }}
+ExecStart=/bin/bash -c "source .venv/bin/activate && python -m burrito"
+
+[Install]
+WantedBy=multi-user.target

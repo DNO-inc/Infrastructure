@@ -1,0 +1,57 @@
+---
+- name: Include python setup tasks
+  ansible.builtin.include_tasks: setup-python-dependencies.yaml
+
+- name: Install mysql
+  ansible.builtin.dnf:
+    name: mysql-server
+    state: installed
+
+- name: Copy mysql-server configuration
+  ansible.builtin.copy:
+    src: mysql-server.cnf
+    dest: /etc/my.cnf.d/mysql-server.cnf
+    mode: "0644"
+  changed_when: true
+  notify: restart mysqld
+  register: result
+
+- name: Enable mysql service
+  ansible.builtin.service:
+    name: mysqld
+    state: started
+    enabled: true
+
+- name: Secure install for mysql
+  ansible.builtin.expect:
+    command: mysql_secure_installation
+    responses:
+      "Would you like to setup VALIDATE PASSWORD component?": ""
+      "New password": "{{ mysql_root_user_password }}"
+      "Re-enter new password": "{{ mysql_root_user_password }}"
+      "Remove anonymous users?": "y"
+      "Disallow root login remotely?": "y"
+      "Remove test database and access to it?": "y"
+      "Reload privilege tables now?": "y"
+    timeout: 2
+  register: secure_mysql
+  failed_when: "'Failed' in secure_mysql.stdout_lines"
+
+- name: Create {{ mysql_burrito_api_db_name }} database
+  community.mysql.mysql_db:
+    login_user: root
+    login_password: "{{ mysql_root_user_password }}"
+    name: "{{ mysql_burrito_api_db_name }}"
+    state: present
+    login_unix_socket: /var/lib/mysql/mysql.sock
+
+- name: Create {{ mysql_burrito_api_username }} user
+  community.mysql.mysql_user:
+    login_user: root
+    login_password: "{{ mysql_root_user_password }}"
+    name: "{{ mysql_burrito_api_username }}"
+    password: "{{ mysql_burrito_api_user_password }}"
+    priv: "{{ mysql_burrito_api_db_name }}.*:ALL"
+    host: "%"
+    state: present
+    login_unix_socket: /var/lib/mysql/mysql.sock

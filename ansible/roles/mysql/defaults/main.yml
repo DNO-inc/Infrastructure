@@ -1,0 +1,9 @@
+---
+
+mysql_burrito_api_db_name: burrito
+mysql_burrito_api_username: burrito
+mysql_burrito_api_user_password: burrito
+
+mysql_mysqld_socket: /var/lib/mysql/mysql.sock
+
+mysql_root_user_password: root

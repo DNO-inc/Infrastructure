@@ -1,0 +1,42 @@
+---
+
+- name: Ensure python deps is installed
+  ansible.builtin.dnf:
+    name: "{{ item }}"
+    state: installed
+  with_items:
+    - poetry
+
+- name: Checkout {{ burrito_git_repo }} to {{ burrito_target_path }}
+  ansible.builtin.git:
+    repo: "{{ burrito_git_repo }}"
+    dest: "{{ burrito_target_path }}"
+    single_branch: true
+    version: main
+
+- name: Install project dependencies
+  ansible.builtin.shell: |
+    cd {{ burrito_target_path }}
+    poetry config virtualenvs.in-project true
+    poetry install
+
+- name: Copy file with environment variables
+  ansible.builtin.copy:
+    src: "{{ burrito_envfile_src }}"
+    dest: "{{ burrito_envfile_dest }}"
+    owner: root
+    group: root
+    mode: "0000"
+
+- name: Copy burrito-api service file
+  ansible.builtin.template:
+    src: burrito-api.service.jinja2
+    dest: /etc/systemd/system/burrito-api.service
+    mode: "0755"
+  notify: reload systemctl
+
+- name: Start burrito-api
+  ansible.builtin.service:
+    name: burrito-api
+    state: started
+    enabled: true
