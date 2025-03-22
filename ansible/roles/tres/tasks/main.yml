@@ -1,5 +1,8 @@
 ---
 
+- name: Enable Node.js 18 module
+  ansible.builtin.shell: dnf module enable -y nodejs:18
+
 - name: Install required dependencies
   ansible.builtin.dnf:
     name: "{{ item }}"
