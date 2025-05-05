@@ -1,0 +1,41 @@
+[
+    {
+        "name": ${container_name},
+        "image": "ghcr.io/dno-inc/burrito:document_db_test",
+        "cpu": ${ecs_task_cpu},
+        "memory": ${ecs_task_memory},
+        "portMappings": [
+            {
+                "containerPort": 8080,
+                "hostPort": 8080,
+                "protocol": "tcp",
+                "appProtocol": "http"
+            },
+            {
+                "containerPort": 8081,
+                "hostPort": 8081,
+                "protocol": "tcp",
+                "appProtocol": "http"
+            }
+        ],
+        "essential": true,
+        "environment": ${environment_vars},
+        "environmentFiles": [],
+        "mountPoints": [],
+        "volumesFrom": [],
+        "ulimits": [],
+        "logConfiguration": {
+            "logDriver": "awslogs",
+            "options": {
+                "awslogs-group": "/ecs/burrito",
+                "mode": "non-blocking",
+                "awslogs-create-group": "true",
+                "max-buffer-size": "25m",
+                "awslogs-region": "eu-west-3",
+                "awslogs-stream-prefix": "ecs"
+            },
+            "secretOptions": []
+        },
+        "systemControls": []
+    }
+]
