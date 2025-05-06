@@ -47,7 +47,7 @@ resource "aws_ecs_task_definition" "ecs_task_definition" {
       ecs_task_cpu     = var.ecs_task_cpu
       ecs_task_memory  = var.ecs_task_memory
       environment_vars = jsonencode(local.environment_vars)
-      container_name   = var.container_name
+      container_name   = jsonencode(var.container_name)
     }
   )
 
