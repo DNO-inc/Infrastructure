@@ -31,10 +31,7 @@ module "mysql_rds" {
   db_username = var.rds_user
   db_password = var.rds_password
 
-  db_subnets = [
-    aws_subnet.private_1.id,
-    aws_subnet.private_2.id
-  ]
+  db_subnets = values(aws_subnet.private)[*].id
   db_security_groups = [
     aws_security_group.mysql.id
   ]
@@ -58,10 +55,7 @@ module "mongo_docdb" {
   docdb_username = var.mongo_user
   docdb_password = var.mongo_password
 
-  docdb_subnets = [
-    aws_subnet.private_1.id,
-    aws_subnet.private_2.id
-  ]
+  docdb_subnets = values(aws_subnet.private)[*].id
   docdb_security_groups = [
     aws_security_group.mongo.id
   ]
@@ -81,13 +75,28 @@ module "redis_elasticache" {
 
   elasticache_subnet_group_name = "apps-redis-subnet-group"
 
-  elasticache_subnets = [
-    aws_subnet.private_1.id,
-    aws_subnet.private_2.id
-  ]
+  elasticache_subnets = values(aws_subnet.private)[*].id
   elasticache_security_groups = [
     aws_security_group.redis.id
   ]
+}
+
+
+module "nat_instance" {
+  source = "./modules/nat_instance"
+
+  for_each = aws_subnet.public
+
+  subnet_id = each.value.id
+
+  instance_type = "t3.micro"
+
+  security_groups = [
+    aws_security_group.egress.id,
+    aws_security_group.nat_ingress.id
+  ]
+
+  user_data = file("${path.module}/etc/nat_instance_userdata")
 }
 
 
@@ -112,10 +121,7 @@ module "burrito_ecs" {
     aws_security_group.burrito.id,
     aws_security_group.egress.id
   ]
-  ecs_service_subnets = [
-    aws_subnet.private_1.id,
-    aws_subnet.private_2.id
-  ]
+  ecs_service_subnets = values(aws_subnet.private)[*].id
 
   env_file_path = var.env_file_template
   env_map = {
@@ -141,6 +147,7 @@ module "burrito_ecs" {
     module.mongo_docdb,
     module.mysql_rds,
     module.redis_elasticache,
+    module.nat_instance,
     aws_lb_listener.http
   ]
 }

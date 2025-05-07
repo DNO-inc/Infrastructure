@@ -1,9 +1,18 @@
+
+locals {
+  vpc_cidr = "172.31.0.0/16"
+  zones = {
+    "a" = { "public_cidr" : "172.31.1.0/24", private_cidr : "172.31.10.0/24" }
+    "b" = { "public_cidr" : "172.31.2.0/24", private_cidr : "172.31.20.0/24" }
+  }
+}
+
 ########################
 # VPC & Networking
 ########################
 
 resource "aws_vpc" "main" {
-  cidr_block       = "172.31.0.0/16"
+  cidr_block       = local.vpc_cidr
   instance_tenancy = "default"
 
   tags = {
@@ -19,56 +28,43 @@ resource "aws_internet_gateway" "igw" {
   }
 }
 
-resource "aws_eip" "nat" {
-  domain = "vpc"
-}
+#resource "aws_eip" "nat" {
+#  domain = "vpc"
+#}
 
-resource "aws_nat_gateway" "nat" {
-  allocation_id = aws_eip.nat.id
-  subnet_id     = aws_subnet.public_1.id
-
-  depends_on = [aws_internet_gateway.igw]
-
-  tags = {
-    Name = "apps-nat-gw"
-  }
-}
+#resource "aws_nat_gateway" "nat" {
+#  allocation_id = aws_eip.nat.id
+#  subnet_id     = aws_subnet.public_1.id
+#
+#  depends_on = [aws_internet_gateway.igw]
+#
+#  tags = {
+#    Name = "apps-nat-gw"
+#  }
+#}
 
 ########################
 # Subnets
 ########################
 
-resource "aws_subnet" "public_1" {
+resource "aws_subnet" "public" {
+  for_each = local.zones
+
   vpc_id                  = aws_vpc.main.id
-  cidr_block              = "172.31.1.0/24"
-  availability_zone       = "${var.aws_region}a"
+  cidr_block              = each.value["public_cidr"]
+  availability_zone       = "${var.aws_region}${each.key}"
   map_public_ip_on_launch = true
 }
 
-resource "aws_subnet" "public_2" {
-  vpc_id                  = aws_vpc.main.id
-  cidr_block              = "172.31.2.0/24"
-  availability_zone       = "${var.aws_region}b"
-  map_public_ip_on_launch = true
-}
+resource "aws_subnet" "private" {
+  for_each = local.zones
 
-resource "aws_subnet" "private_1" {
   vpc_id            = aws_vpc.main.id
-  cidr_block        = "172.31.20.0/24"
-  availability_zone = "${var.aws_region}a"
+  cidr_block        = each.value["private_cidr"]
+  availability_zone = "${var.aws_region}${each.key}"
 
   tags = {
-    Name = "apps-private-subnet-a"
-  }
-}
-
-resource "aws_subnet" "private_2" {
-  vpc_id            = aws_vpc.main.id
-  cidr_block        = "172.31.30.0/24"
-  availability_zone = "${var.aws_region}b"
-
-  tags = {
-    Name = "apps-private-subnet-b"
+    Name = "apps-private-subnet-${each.key}"
   }
 }
 
@@ -90,13 +86,10 @@ resource "aws_route_table" "public" {
   }
 }
 
-resource "aws_route_table_association" "public_assoc_1" {
-  subnet_id      = aws_subnet.public_1.id
-  route_table_id = aws_route_table.public.id
-}
+resource "aws_route_table_association" "public_assoc" {
+  for_each = local.zones
 
-resource "aws_route_table_association" "public_assoc_2" {
-  subnet_id      = aws_subnet.public_2.id
+  subnet_id      = aws_subnet.public[each.key].id
   route_table_id = aws_route_table.public.id
 }
 
@@ -104,9 +97,11 @@ resource "aws_route_table_association" "public_assoc_2" {
 resource "aws_route_table" "private" {
   vpc_id = aws_vpc.main.id
 
+  for_each = aws_subnet.private
+
   route {
-    cidr_block     = "0.0.0.0/0"
-    nat_gateway_id = aws_nat_gateway.nat.id
+    cidr_block           = "0.0.0.0/0"
+    network_interface_id = module.nat_instance[each.key].nat_instance_interface
   }
 
   tags = {
@@ -114,14 +109,11 @@ resource "aws_route_table" "private" {
   }
 }
 
-resource "aws_route_table_association" "private_assoc_1" {
-  subnet_id      = aws_subnet.private_1.id
-  route_table_id = aws_route_table.private.id
-}
 
-resource "aws_route_table_association" "private_assoc_2" {
-  subnet_id      = aws_subnet.private_2.id
-  route_table_id = aws_route_table.private.id
+resource "aws_route_table_association" "private_assoc" {
+  for_each       = local.zones
+  subnet_id      = aws_subnet.private[each.key].id
+  route_table_id = aws_route_table.private[each.key].id
 }
 
 ########################
@@ -205,6 +197,17 @@ resource "aws_security_group" "egress" {
   }
 }
 
+resource "aws_security_group" "nat_ingress" {
+  name   = "nat-ingress-sg"
+  vpc_id = aws_vpc.main.id
+
+  ingress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
 
 ########################
 # ALB Security Group
@@ -241,10 +244,8 @@ resource "aws_lb" "app" {
   name               = "apps-alb"
   load_balancer_type = "application"
   internal           = false
-  subnets = [
-    aws_subnet.public_1.id,
-    aws_subnet.public_2.id
-  ]
+  subnets            = values(aws_subnet.public)[*].id
+
   security_groups = [aws_security_group.alb.id]
 
   tags = {
