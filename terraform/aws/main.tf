@@ -153,6 +153,13 @@ module "burrito_ecs" {
 }
 
 
+module "sns_email" {
+  source = "./modules/sns"
+
+  name       = "email-topic"
+  email_list = var.sns_subscribers_email_list
+}
+
 #module "static_apps" {
 #  source = "./modules/s3_sites"
 #

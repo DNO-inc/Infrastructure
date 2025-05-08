@@ -32,3 +32,7 @@ variable "redis_password" {
   type    = string
   default = ""
 }
+
+variable "sns_subscribers_email_list" {
+  type = list(string)
+}
