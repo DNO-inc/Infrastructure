@@ -2,8 +2,8 @@
 locals {
   vpc_cidr = "172.31.0.0/16"
   zones = {
-    "a" = { "public_cidr" : "172.31.1.0/24", private_cidr : "172.31.10.0/24" }
-    "b" = { "public_cidr" : "172.31.2.0/24", private_cidr : "172.31.20.0/24" }
+    "a" = { "public_cidr" : "172.31.1.0/24", "private_cidr" : "172.31.10.0/24" }
+    "b" = { "public_cidr" : "172.31.2.0/24", "private_cidr" : "172.31.20.0/24" }
   }
 }
 

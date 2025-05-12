@@ -33,6 +33,14 @@ variable "redis_password" {
   default = ""
 }
 
+variable "ssm_parameter_name_for_email_list" {
+  type = string
+}
+
 variable "sns_subscribers_email_list" {
   type = list(string)
+}
+
+variable "email_source_address" {
+  type = string
 }

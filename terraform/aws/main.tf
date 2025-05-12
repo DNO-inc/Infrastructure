@@ -154,10 +154,17 @@ module "burrito_ecs" {
 
 
 module "sns_email" {
-  source = "./modules/sns"
+  source = "./modules/emails"
 
-  name       = "email-topic"
-  email_list = var.sns_subscribers_email_list
+  sns_topic_arn = aws_sns_topic.critical.arn
+
+  ssm_parameter_name_for_email_list = var.ssm_parameter_name_for_email_list
+  email_list                        = var.sns_subscribers_email_list
+
+  email_source_address = var.email_source_address
+
+  function_name     = "email-notifications"
+  function_filename = "${path.module}/etc/email_processor_func.py"
 }
 
 #module "static_apps" {
