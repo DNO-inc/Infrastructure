@@ -75,6 +75,10 @@ resource "aws_iam_role_policy_attachment" "lambda_ses_attach" {
 }
 
 
+resource "aws_cloudwatch_log_group" "lambda_log_group" {
+  name              = "/aws/lambda/${var.function_name}"
+  retention_in_days = var.logs_retention_days
+}
 
 data "archive_file" "python_lambda_package" {
   type        = "zip"
@@ -97,6 +101,11 @@ resource "aws_lambda_function" "email_processor_func" {
       EMAIL_LIST_SSM_PARAMETER = var.ssm_parameter_name_for_email_list
       SOURCE_EMAIL_ADDRESS     = var.email_source_address
     }
+  }
+
+  logging_config {
+    log_format = "Text"
+    log_group  = aws_cloudwatch_log_group.lambda_log_group.name
   }
 }
 

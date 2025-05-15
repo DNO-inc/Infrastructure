@@ -22,3 +22,8 @@ variable "function_filename" {
 variable "email_source_address" {
   type = string
 }
+
+variable "logs_retention_days" {
+  type    = number
+  default = 3
+}
