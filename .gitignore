@@ -7,7 +7,7 @@ terraform.tfvars
 certs/*
 
 .venv
-.env
+.env*
 .vscode
 
 policies

@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: burrito
+  namespace: default
+  labels:
+    app: burrito
+spec:
+  selector:
+    matchLabels:
+      app: burrito
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: burrito
+    spec:
+      containers:
+      - name: burrito
+        image: ghcr.io/dno-inc/burrito:document_db_test
+        imagePullPolicy: "Always"
+        resources:
+          requests:
+            cpu: 100m
+            memory: 100Mi
+          limits:
+            memory: 400Mi
+        ports:
+        - containerPort: 8080
+        - containerPort: 8081
+        envFrom:
+        - configMapRef:
+            name: burrito-config
+        - secretRef:
+            name: burrito-secret
+      restartPolicy: Always
