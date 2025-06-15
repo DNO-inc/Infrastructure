@@ -37,4 +37,8 @@ resource "aws_launch_template" "eks_node_group" {
   lifecycle {
     create_before_destroy = true
   }
+
+  maintenance_options {
+    auto_recovery = "default"
+  }
 }

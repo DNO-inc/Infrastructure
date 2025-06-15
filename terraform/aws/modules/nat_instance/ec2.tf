@@ -28,4 +28,8 @@ resource "aws_instance" "nat_instance" {
   user_data                   = var.user_data
 
   source_dest_check = false
+
+  maintenance_options {
+    auto_recovery = "default"
+  }
 }
