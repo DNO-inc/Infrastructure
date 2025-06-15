@@ -1,9 +1,0 @@
-- name: Configure mysql
-  hosts: dbs
-  remote_user: admin
-  become: true
-  vars_files:
-    - ./vars.yaml
-
-  roles:
-    - mysql

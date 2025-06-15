@@ -1,7 +1,0 @@
-- name: Configure mongo
-  hosts: dbs
-  remote_user: admin
-  become: true
-
-  roles:
-    - mongo

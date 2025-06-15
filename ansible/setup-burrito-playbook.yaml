@@ -1,7 +1,0 @@
-- name: Configure redis
-  hosts: tres_burrito
-  remote_user: admin
-  become: true
-
-  roles:
-    - burrito

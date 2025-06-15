@@ -1,6 +1,0 @@
----
-
-burrito_git_repo: https://github.com/DNO-inc/Burrito.git
-burrito_target_path: /apps/burrito
-burrito_envfile_src: .env
-burrito_envfile_dest: /etc/burrito-api.env

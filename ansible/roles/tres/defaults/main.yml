@@ -1,6 +1,0 @@
----
-
-tres_target_path: /apps/tres
-tres_git_repo: https://github.com/DNO-inc/TreS_frontend.git
-tres_artifact_path: /usr/share/nginx/html
-tres_envfile_src: .env
