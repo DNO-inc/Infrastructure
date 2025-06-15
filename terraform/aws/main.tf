@@ -99,56 +99,17 @@ module "nat_instance" {
   user_data = file("${path.module}/etc/nat_instance_userdata")
 }
 
+module "eks" {
+  source = "./modules/eks"
 
-module "burrito_ecs" {
-  source = "./modules/ecs"
+  vpc_id = aws_vpc.main.id
 
-  container_name = "burrito"
+  cluster_name = "my-eks-cluster"
 
-  task_role_arn      = aws_iam_role.ecs_task_execution_role.arn
-  execution_role_arn = aws_iam_role.ecs_task_execution_role.arn
+  subnet_ids = values(aws_subnet.private)[*].id
 
-  ecs_cluster_id = aws_ecs_cluster.main_cluster.id
-
-  ecs_service_name = "burrito-service"
-
-  ecs_task_family                = "burrito"
-  ecs_task_container_definitions = "./ecs/burrito-definition"
-  ecs_task_cpu                   = "1024"
-  ecs_task_memory                = "2048"
-
-  ecs_service_security_groups = [
-    aws_security_group.burrito.id,
-    aws_security_group.egress.id
-  ]
-  ecs_service_subnets = values(aws_subnet.private)[*].id
-
-  env_file_path = var.env_file_template
-  env_map = {
-    mysql_host     = module.mysql_rds.host
-    mysql_port     = module.mysql_rds.port
-    mysql_user     = var.rds_user
-    mysql_password = var.rds_password
-
-    redis_host     = module.redis_elasticache.host
-    redis_port     = module.redis_elasticache.port
-    redis_user     = var.redis_user
-    redis_password = var.redis_password
-
-    mongo_host     = module.mongo_docdb.host
-    mongo_port     = module.mongo_docdb.port
-    mongo_user     = var.mongo_user
-    mongo_password = var.mongo_password
-  }
-
-  lb_target_arn = aws_lb_target_group.ecs.arn
-
-  depends_on = [
-    module.mongo_docdb,
-    module.mysql_rds,
-    module.redis_elasticache,
-    module.nat_instance,
-    aws_lb_listener.http
+  additional_node_sg = [
+    aws_security_group.burrito.id
   ]
 }
 
@@ -167,13 +128,47 @@ module "sns_email" {
   function_filename = "${path.module}/etc/email_processor_func.py"
 }
 
-#module "static_apps" {
-#  source = "./modules/s3_sites"
-#
-#  bucket_name = "super-mega-static-apps"
-#
-#  allowed_headers = ["*"]
-#  allowed_methods = ["GET"]
-#  allowed_origins = ["*"]
-#  expose_headers  = ["ETag"]
-#}
+
+module "s3_burrito_api_files" {
+  source = "./modules/s3"
+
+  bucket_name = "burrito-api-files"
+
+  dedicated_user_data = {
+    name                        = "s3-user-burrito-api-files"
+    ssm_recovery_window_in_days = 30
+  }
+}
+
+
+module "s3_tres_static" {
+  source = "./modules/s3"
+
+  bucket_name = "tres-static"
+
+  cors_rules = [
+    {
+      allowed_headers = ["*"]
+      allowed_methods = ["GET"]
+      allowed_origins = ["*"]
+      expose_headers  = ["ETag"]
+    }
+  ]
+
+  site_config = {
+    index_document = "index.html"
+    error_document = "index.html"
+  }
+
+  acl_config = {
+    block_public_acls       = false
+    block_public_policy     = false
+    ignore_public_acls      = false
+    restrict_public_buckets = false
+  }
+
+  dedicated_user_data = {
+    name                        = "s3-user-tres-static"
+    ssm_recovery_window_in_days = 30
+  }
+}
