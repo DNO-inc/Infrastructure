@@ -54,6 +54,10 @@ resource "aws_subnet" "public" {
   cidr_block              = each.value["public_cidr"]
   availability_zone       = "${var.aws_region}${each.key}"
   map_public_ip_on_launch = true
+
+  tags = {
+    Name = "apps-public-subnet-${each.key}"
+  }
 }
 
 resource "aws_subnet" "private" {
@@ -121,70 +125,120 @@ resource "aws_route_table_association" "private_assoc" {
 # Security Groups
 ########################
 
-# ECS App (8080)
 resource "aws_security_group" "burrito" {
   name   = "burrito-sg"
   vpc_id = aws_vpc.main.id
-
-  ingress {
-    from_port   = 8080
-    to_port     = 8080
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  ingress {
-    from_port   = 8081
-    to_port     = 8081
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
 }
 
-# MySQL
 resource "aws_security_group" "mysql" {
   name   = "mysql-sg"
   vpc_id = aws_vpc.main.id
-
-  ingress {
-    from_port = 3306
-    to_port   = 3306
-    protocol  = "tcp"
-    security_groups = [
-      aws_security_group.burrito.id
-    ]
-  }
 }
 
-# MongoDB
 resource "aws_security_group" "mongo" {
   name   = "mongo-sg"
   vpc_id = aws_vpc.main.id
-
-  ingress {
-    from_port = 27017
-    to_port   = 27017
-    protocol  = "tcp"
-    security_groups = [
-      aws_security_group.burrito.id
-    ]
-  }
 }
 
-# Redis
 resource "aws_security_group" "redis" {
   name   = "redis-sg"
   vpc_id = aws_vpc.main.id
-
-  ingress {
-    from_port = 6379
-    to_port   = 6379
-    protocol  = "tcp"
-    security_groups = [
-      aws_security_group.burrito.id
-    ]
-  }
 }
+
+# Ingress Rules
+resource "aws_security_group_rule" "burrito_ingress_8080" {
+  type              = "ingress"
+  from_port         = 8080
+  to_port           = 8080
+  protocol          = "tcp"
+  cidr_blocks       = ["0.0.0.0/0"]
+  security_group_id = aws_security_group.burrito.id
+}
+
+resource "aws_security_group_rule" "burrito_ingress_8081" {
+  type              = "ingress"
+  from_port         = 8081
+  to_port           = 8081
+  protocol          = "tcp"
+  cidr_blocks       = ["0.0.0.0/0"]
+  security_group_id = aws_security_group.burrito.id
+}
+
+# Egress Rules from Burrito to Services
+resource "aws_security_group_rule" "burrito_to_mysql" {
+  type                     = "egress"
+  from_port                = 3306
+  to_port                  = 3306
+  protocol                 = "tcp"
+  security_group_id        = aws_security_group.burrito.id
+  source_security_group_id = aws_security_group.mysql.id
+}
+
+resource "aws_security_group_rule" "burrito_to_mongo" {
+  type                     = "egress"
+  from_port                = 27017
+  to_port                  = 27017
+  protocol                 = "tcp"
+  security_group_id        = aws_security_group.burrito.id
+  source_security_group_id = aws_security_group.mongo.id
+}
+
+resource "aws_security_group_rule" "burrito_to_redis" {
+  type                     = "egress"
+  from_port                = 6379
+  to_port                  = 6379
+  protocol                 = "tcp"
+  security_group_id        = aws_security_group.burrito.id
+  source_security_group_id = aws_security_group.redis.id
+}
+
+# Ingress Rules for MySQL, Mongo, Redis
+resource "aws_security_group_rule" "mysql_ingress" {
+  type                     = "ingress"
+  from_port                = 3306
+  to_port                  = 3306
+  protocol                 = "tcp"
+  security_group_id        = aws_security_group.mysql.id
+  source_security_group_id = aws_security_group.burrito.id
+}
+
+resource "aws_security_group_rule" "mongo_ingress" {
+  type                     = "ingress"
+  from_port                = 27017
+  to_port                  = 27017
+  protocol                 = "tcp"
+  security_group_id        = aws_security_group.mongo.id
+  source_security_group_id = aws_security_group.burrito.id
+}
+
+resource "aws_security_group_rule" "redis_ingress" {
+  type                     = "ingress"
+  from_port                = 6379
+  to_port                  = 6379
+  protocol                 = "tcp"
+  security_group_id        = aws_security_group.redis.id
+  source_security_group_id = aws_security_group.burrito.id
+}
+
+# Egress for HTTP/HTTPS
+resource "aws_security_group_rule" "burrito_egress_http" {
+  type              = "egress"
+  from_port         = 80
+  to_port           = 80
+  protocol          = "tcp"
+  cidr_blocks       = ["0.0.0.0/0"]
+  security_group_id = aws_security_group.burrito.id
+}
+
+resource "aws_security_group_rule" "burrito_egress_https" {
+  type              = "egress"
+  from_port         = 443
+  to_port           = 443
+  protocol          = "tcp"
+  cidr_blocks       = ["0.0.0.0/0"]
+  security_group_id = aws_security_group.burrito.id
+}
+
 
 resource "aws_security_group" "egress" {
   name   = "egress-sg"
@@ -235,64 +289,4 @@ resource "aws_security_group" "alb" {
   tags = {
     Name = "alb-sg"
   }
-}
-
-########################
-# Application Load Balancer
-########################
-
-resource "aws_lb" "app" {
-  name               = "apps-alb"
-  load_balancer_type = "application"
-  internal           = false
-  subnets            = values(aws_subnet.public)[*].id
-
-  security_groups = [aws_security_group.alb.id]
-
-  tags = {
-    Name = "apps-alb"
-  }
-}
-
-########################
-# Target Group
-########################
-
-resource "aws_lb_target_group" "ecs" {
-  name        = "ecs-target-group"
-  port        = 80
-  protocol    = "HTTP"
-  target_type = "ip"
-  vpc_id      = aws_vpc.main.id
-
-  health_check {
-    path                = "/docs"
-    protocol            = "HTTP"
-    interval            = 30
-    timeout             = 5
-    healthy_threshold   = 2
-    unhealthy_threshold = 2
-    matcher             = "200-399"
-  }
-
-  tags = {
-    Name = "ecs-tg"
-  }
-}
-
-########################
-# Listener (HTTP :80)
-########################
-
-resource "aws_lb_listener" "http" {
-  load_balancer_arn = aws_lb.app.arn
-  port              = 80
-  protocol          = "HTTP"
-
-  default_action {
-    type             = "forward"
-    target_group_arn = aws_lb_target_group.ecs.arn
-  }
-
-  depends_on = [aws_lb_target_group.ecs]
 }
