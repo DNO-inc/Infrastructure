@@ -27,6 +27,11 @@ module "mysql_rds" {
   db_engine         = "mysql"
   db_engine_version = "8.4.4"
   db_instance_class = "db.t4g.micro"
+  rds_identifier    = "apps-rds-instance"
+
+  skip_final_snapshot = true
+
+  multi_az = true
 
   db_username = var.rds_user
   db_password = var.rds_password

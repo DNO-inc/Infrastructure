@@ -41,5 +41,14 @@ variable "db_password" {
 
 variable "skip_final_snapshot" {
   type    = bool
-  default = true
+  default = false
+}
+
+variable "rds_identifier" {
+  type = string
+}
+
+variable "multi_az" {
+  type    = bool
+  default = false
 }

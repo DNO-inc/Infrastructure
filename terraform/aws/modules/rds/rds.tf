@@ -5,6 +5,7 @@ resource "aws_db_subnet_group" "db_subnet_group" {
 }
 
 resource "aws_db_instance" "db_instance" {
+  identifier        = var.rds_identifier
   allocated_storage = var.allocated_storage
   db_name           = var.db_name
   engine            = var.db_engine
@@ -14,6 +15,8 @@ resource "aws_db_instance" "db_instance" {
   password          = var.db_password
 
   publicly_accessible = false
+
+  multi_az = var.multi_az
 
   skip_final_snapshot = var.skip_final_snapshot
 
