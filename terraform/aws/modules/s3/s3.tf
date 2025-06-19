@@ -50,53 +50,43 @@ resource "aws_s3_bucket_public_access_block" "example" {
 
 
 
-resource "aws_s3_bucket_policy" "allow_public_access" {
-  count  = var.site_config != null ? 1 : 0
+resource "aws_s3_bucket_policy" "bucket_policy" {
+  count  = (var.site_config != null || var.dedicated_user_data != null) ? 1 : 0
   bucket = aws_s3_bucket.bucket.id
 
   policy = jsonencode({
     Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Principal = {
-          AWS = "*"
+    Statement = flatten([
+      var.site_config != null ? [
+        {
+          Effect = "Allow"
+          Principal = {
+            AWS = "*"
+          }
+          Action = [
+            "s3:GetObject"
+          ]
+          Resource = [
+            "${aws_s3_bucket.bucket.arn}/*"
+          ]
         }
-        Action = [
-          "s3:*Object",
-          "s3:ListBucket"
-        ]
-        Resource = [
-          aws_s3_bucket.bucket.arn,
-          "${aws_s3_bucket.bucket.arn}/*"
-        ]
-      }
-    ]
-  })
-}
+      ] : [],
 
-
-
-resource "aws_s3_bucket_policy" "allow_access_for_created_user" {
-  count  = var.dedicated_user_data != null ? 1 : 0
-  bucket = aws_s3_bucket.bucket.id
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Principal = {
-          AWS = aws_iam_user.user[count.index].arn
+      var.dedicated_user_data != null ? [
+        {
+          Effect = "Allow"
+          Principal = {
+            AWS = aws_iam_user.user[0].arn
+          }
+          Action = [
+            "s3:*Object"
+          ]
+          Resource = [
+            aws_s3_bucket.bucket.arn,
+            "${aws_s3_bucket.bucket.arn}/*"
+          ]
         }
-        Action = [
-          "s3:*Object"
-        ]
-        Resource = [
-          aws_s3_bucket.bucket.arn,
-          "${aws_s3_bucket.bucket.arn}/*"
-        ]
-      }
-    ]
+      ] : []
+    ])
   })
 }
